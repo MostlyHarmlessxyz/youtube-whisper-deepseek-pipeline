@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+url.txt
+downloads/
+outputs/
+cache/
+logs/
+models/
+tools/
+videos/
+youtube_whisper_deepseek.egg-info/
+MIT 6.S184 Flow Matching and Diffusion Models (2026)/
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.mp4
+*.mkv
+*.ass

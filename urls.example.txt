@@ -1,0 +1,8 @@
+# One URL or local media path per line.
+# Blank lines and comments are ignored.
+#
+# MIT 6.S184 course mode:
+# .\.venv\Scripts\yt-translate.exe --file urls.txt --mit-diffusion
+#
+# Paste remaining YouTube lecture links below, one per line:
+# https://www.youtube.com/watch?v=VIDEO_ID
