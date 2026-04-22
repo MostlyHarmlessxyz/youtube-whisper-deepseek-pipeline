@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 import traceback
 from pathlib import Path
 
@@ -98,6 +99,10 @@ def iter_sources(source: str | None, file: str | None) -> list[str]:
 
 def main() -> None:
     os.environ.setdefault("PYTHONUTF8", "1")
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args()
     if args.doctor:
         run_doctor()
