@@ -13,6 +13,7 @@ from .profiles import (
     get_profile,
     glossary_text,
 )
+from .segments import merge_sentence_segments
 from .subtitles import read_json_segments, write_json, write_srt, write_vtt
 from .transcriber import recommended_cpu_threads, transcribe_audio
 from .translator import translate_segments
@@ -60,6 +61,7 @@ def run_pipeline(
     whispercpp_no_gpu: bool = False,
     whispercpp_suppress_non_speech: bool = True,
     profile_name: str | None = None,
+    merge_segments: bool = True,
 ) -> PipelineResult:
     load_dotenv(PROJECT_ROOT / ".env")
     profile = get_profile(profile_name)
@@ -116,7 +118,19 @@ def run_pipeline(
             )
         else:
             raise RuntimeError(f"Unsupported backend: {backend}")
+    raw_segment_count = len(segments)
     segments = apply_asr_profile(segments, profile)
+    if merge_segments:
+        segments = merge_sentence_segments(segments)
+        metadata["raw_segment_count"] = raw_segment_count
+        metadata["merged_segment_count"] = len(segments)
+        metadata["segment_merge"] = {
+            "max_gap": 0.9,
+            "min_duration": 3.0,
+            "min_chars": 45,
+            "max_duration": 14.0,
+            "max_chars": 240,
+        }
     if profile:
         metadata["profile"] = profile.name
     write_json(transcript_json, segments, metadata)

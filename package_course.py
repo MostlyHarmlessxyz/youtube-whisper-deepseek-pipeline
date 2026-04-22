@@ -11,6 +11,11 @@ ROOT = Path(__file__).resolve().parent
 VIDEOS = ROOT / "videos"
 OUTPUTS = ROOT / "outputs"
 COURSE_DIR = ROOT / "MIT 6.S184 Flow Matching and Diffusion Models (2026)"
+SOURCE_VIDEO_DIR = COURSE_DIR / "source-videos"
+SUBTITLE_DIR = COURSE_DIR / "subtitles"
+SOFT_SUB_DIR = COURSE_DIR / "soft-subbed-mkv"
+HARD_SUB_DIR = COURSE_DIR / "hard-subbed-mkv"
+FONT_DIR = COURSE_DIR / "fonts"
 FONT_ZH = Path(r"C:\Windows\Fonts\simkai.ttf")
 FONT_EN = Path(r"C:\Windows\Fonts\georgia.ttf")
 
@@ -51,6 +56,10 @@ def video_id(path: Path) -> str:
     return match.group(1)
 
 
+def ffmpeg_filter_path(path: Path) -> str:
+    return str(path.resolve()).replace("\\", "/").replace(":", r"\:")
+
+
 def write_ass(json_path: Path, ass_path: Path) -> None:
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     events: list[str] = []
@@ -86,7 +95,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     ass_path.write_text(ass, encoding="utf-8-sig")
 
 
-def run_ffmpeg(video: Path, ass: Path, mkv: Path) -> None:
+def run(command: list[str], *, cwd: Path | None = None) -> None:
+    subprocess.run(command, check=True, cwd=cwd)
+
+
+def mux_soft_subbed(video: Path, ass: Path, mkv: Path) -> None:
     command = [
         "ffmpeg",
         "-hide_banner",
@@ -106,7 +119,7 @@ def run_ffmpeg(video: Path, ass: Path, mkv: Path) -> None:
         "-metadata:s:s:0",
         "language=chi",
         "-metadata:s:s:0",
-        "title=中文 / English",
+        "title=Chinese / English",
         "-disposition:s:0",
         "default",
     ]
@@ -127,26 +140,70 @@ def run_ffmpeg(video: Path, ass: Path, mkv: Path) -> None:
             ]
         )
     command.append(str(mkv))
-    subprocess.run(command, check=True)
+    run(command)
+
+
+def mux_hard_subbed(video: Path, ass: Path, mkv: Path) -> None:
+    filter_arg = f"subtitles=filename='{ass.name}':fontsdir='{ffmpeg_filter_path(FONT_DIR)}'"
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-y",
+        "-i",
+        str(video),
+        "-vf",
+        filter_arg,
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a?",
+        "-sn",
+        "-c:v",
+        "av1_qsv",
+        "-global_quality",
+        "30",
+        "-preset",
+        "medium",
+        "-c:a",
+        "copy",
+        str(mkv),
+    ]
+    run(command, cwd=ass.parent)
+
+
+def prepare_dirs() -> None:
+    for path in (SOURCE_VIDEO_DIR, SUBTITLE_DIR, SOFT_SUB_DIR, HARD_SUB_DIR, FONT_DIR):
+        path.mkdir(parents=True, exist_ok=True)
+    for font in (FONT_ZH, FONT_EN):
+        if font.exists():
+            shutil.copy2(font, FONT_DIR / font.name)
 
 
 def main() -> None:
-    COURSE_DIR.mkdir(parents=True, exist_ok=True)
+    prepare_dirs()
     json_by_id = {video_id(path): path for path in OUTPUTS.glob("*.zh-CN.json")}
     source_srt_by_id = {video_id(path): path for path in OUTPUTS.glob("*.source.srt")}
     zh_srt_by_id = {video_id(path): path for path in OUTPUTS.glob("*.zh-CN.srt")}
     bilingual_srt_by_id = {video_id(path): path for path in OUTPUTS.glob("*.bilingual.srt")}
 
-    for video in sorted(VIDEOS.glob("*.mp4"), key=lambda path: simplify_title(path.name)):
+    videos = sorted(VIDEOS.glob("*.*"), key=lambda path: simplify_title(path.name))
+    if not videos:
+        raise RuntimeError(f"No source videos found in {VIDEOS}")
+
+    for video in videos:
         vid = video_id(video)
         simple = simplify_title(video.name)
-        print(f"Packaging {simple}")
-        simple_mp4 = COURSE_DIR / f"{simple}.mp4"
-        ass_path = COURSE_DIR / f"{simple}.bilingual.ass"
-        mkv_path = COURSE_DIR / f"{simple}.bilingual.mkv"
+        if vid not in json_by_id:
+            raise RuntimeError(f"Missing translated JSON for video id {vid}: {video.name}")
 
-        if not simple_mp4.exists() or simple_mp4.stat().st_size != video.stat().st_size:
-            shutil.copy2(video, simple_mp4)
+        print(f"Packaging {simple}", flush=True)
+        source_video = SOURCE_VIDEO_DIR / f"{simple}{video.suffix.lower()}"
+        ass_path = SUBTITLE_DIR / f"{simple}.bilingual.ass"
+        soft_mkv = SOFT_SUB_DIR / f"{simple}.soft-subbed.mkv"
+        hard_mkv = HARD_SUB_DIR / f"{simple}.hard-subbed.mkv"
+
+        if not source_video.exists() or source_video.stat().st_size != video.stat().st_size:
+            shutil.copy2(video, source_video)
         write_ass(json_by_id[vid], ass_path)
 
         for suffix, mapping in (
@@ -155,9 +212,10 @@ def main() -> None:
             (".bilingual.srt", bilingual_srt_by_id),
         ):
             if vid in mapping:
-                shutil.copy2(mapping[vid], COURSE_DIR / f"{simple}{suffix}")
+                shutil.copy2(mapping[vid], SUBTITLE_DIR / f"{simple}{suffix}")
 
-        run_ffmpeg(simple_mp4, ass_path, mkv_path)
+        mux_soft_subbed(source_video, ass_path, soft_mkv)
+        mux_hard_subbed(source_video, ass_path, hard_mkv)
 
 
 if __name__ == "__main__":

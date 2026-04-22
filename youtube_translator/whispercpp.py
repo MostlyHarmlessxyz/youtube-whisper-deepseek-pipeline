@@ -92,7 +92,7 @@ def transcribe_with_whispercpp(
     if suppress_non_speech:
         command.append("-sns")
 
-    proc = subprocess.run(command, text=True, capture_output=True)
+    proc = subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True)
     if proc.returncode != 0:
         raise RuntimeError(f"whisper.cpp failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}")
     if not srt_path.exists():
@@ -104,7 +104,5 @@ def transcribe_with_whispercpp(
         "device": device,
         "threads": threads,
         "use_gpu": use_gpu,
-        "stdout_tail": proc.stdout[-4000:],
-        "stderr_tail": proc.stderr[-4000:],
     }
     return parse_srt(srt_path), metadata

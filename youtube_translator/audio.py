@@ -23,8 +23,7 @@ def convert_to_wav(input_path: Path, output_path: Path, overwrite: bool = False)
         "pcm_s16le",
         str(output_path),
     ]
-    proc = subprocess.run(command, text=True, capture_output=True)
+    proc = subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True)
     if proc.returncode != 0:
         raise RuntimeError(f"ffmpeg failed:\n{proc.stderr}")
     return output_path
-

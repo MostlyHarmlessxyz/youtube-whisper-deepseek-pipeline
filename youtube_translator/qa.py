@@ -21,7 +21,13 @@ def qa_report(path: Path, profile_name: str | None = None) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     segments = payload.get("segments", [])
     missing = [item.get("index") for item in segments if not item.get("translated_text") and "translated_text" in item]
-    text = path.read_text(encoding="utf-8")
+    text = "\n".join(
+        "\n".join(
+            str(value or "")
+            for value in (item.get("text"), item.get("translated_text"))
+        )
+        for item in segments
+    )
 
     suspicious = list(DEFAULT_SUSPICIOUS)
     if profile:
@@ -41,4 +47,3 @@ def qa_report(path: Path, profile_name: str | None = None) -> None:
     print(f"Suspicious terms: {len(hits)}")
     for hit in hits[:50]:
         print(f"- {hit}")
-

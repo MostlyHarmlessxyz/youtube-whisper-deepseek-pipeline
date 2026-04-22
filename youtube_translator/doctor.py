@@ -20,7 +20,14 @@ def command_version(command: str, args: list[str]) -> str:
     if not exe:
         return "missing"
     try:
-        proc = subprocess.run([exe, *args], capture_output=True, text=True, timeout=20)
+        proc = subprocess.run(
+            [exe, *args],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=20,
+        )
     except Exception as exc:  # noqa: BLE001 - diagnostic should not crash on odd tools.
         return f"error: {exc}"
     line = (proc.stdout or proc.stderr).splitlines()

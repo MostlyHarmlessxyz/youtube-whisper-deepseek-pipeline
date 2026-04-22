@@ -44,6 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-translation", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--keep-going", action="store_true", default=True, help="Continue batch after one source fails.")
+    parser.add_argument(
+        "--no-merge-segments",
+        action="store_true",
+        help="Keep raw Whisper subtitle segmentation instead of merging short chunks.",
+    )
     parser.add_argument("--vtt", action="store_true", help="Also output WebVTT files.")
     parser.add_argument("--doctor", action="store_true", help="Check local environment and exit.")
     parser.add_argument("--qa", help="Run QA on an output JSON file and exit.")
@@ -128,6 +133,7 @@ def main() -> None:
                 whispercpp_no_gpu=args.whispercpp_no_gpu,
                 whispercpp_suppress_non_speech=not args.whispercpp_keep_nst,
                 profile_name=args.profile,
+                merge_segments=not args.no_merge_segments,
             )
         except Exception:
             print(f"Failed: {source}", flush=True)
