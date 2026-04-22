@@ -21,7 +21,7 @@ def parse_srt_timestamp(value: str) -> float:
 
 
 def parse_srt(path: Path) -> list[Segment]:
-    raw = path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    raw = path.read_text(encoding="utf-8-sig", errors="replace").replace("\r\n", "\n")
     blocks = [block.strip() for block in raw.split("\n\n") if block.strip()]
     segments: list[Segment] = []
     for block in blocks:
