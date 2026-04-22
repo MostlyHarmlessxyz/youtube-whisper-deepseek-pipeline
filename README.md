@@ -1,37 +1,20 @@
 # YouTube Whisper DeepSeek Pipeline
 
-面向中文用户的 YouTube 课程视频翻译流水线：下载音频，使用 Whisper 转写，调用 DeepSeek API 翻译，生成原文/中文字幕/双语字幕，并可将双语 ASS 字幕和字体封装进 MKV。
+面向中文用户的本地 YouTube 视频翻译流水线：下载音频，使用 Whisper 转写，调用 DeepSeek API 翻译，生成原文字幕、中文字幕和双语字幕。
 
 > 默认文档为中文。English documentation: [README_EN.md](README_EN.md)
 
 ## 特性
 
-- YouTube URL 或本地媒体文件输入。
-- `yt-dlp` 下载音频，`ffmpeg` 转为 16 kHz mono WAV。
-- `faster-whisper` CPU 后端，适合作为稳定 fallback。
-- `whisper.cpp + Vulkan` 后端，适合 Intel Arc / AMD / NVIDIA 等 Vulkan GPU。
-- DeepSeek OpenAI-compatible API 分批翻译。
-- 翻译 checkpoint，支持中断后续跑。
-- 输出 `.json`、`.srt`、`.vtt`、双语 `.srt`。
-- 课程 profile：内置 MIT 6.S184 Flow Matching and Diffusion Models 术语表和 ASR 纠错。
-- QA 检查：发现缺失翻译和常见术语漂移。
-- 可下载最高画质原视频，并封装双语 ASS 字幕和字体到 MKV。
-
-## 适用场景
-
-这个项目最初为 MIT 6.S184: Introduction to Flow Matching and Diffusion Models 课程视频构建，但也可以用于普通英文 YouTube 视频翻译。
-
-内置 MIT 课程 profile 会处理这类术语：
-
-- `flow matching` -> `流匹配`
-- `score matching` -> `score matching / 分数匹配`
-- `classifier-free guidance` -> `无分类器引导`
-- `Fokker-Planck equation` -> `Fokker-Planck 方程`
-- `probability path` -> `概率路径`
-- `vector field` -> `向量场`
-- `SDE / ODE / CTMC / DiT / U-Net / VAE`
-
-它还会修正常见 ASR 误听，例如 `floor matching` -> `flow matching`。
+- 支持 YouTube URL 或本地媒体文件输入。
+- 使用 `yt-dlp` 下载音频，使用 `ffmpeg` 转为 16 kHz mono WAV。
+- 支持 `faster-whisper` CPU 后端，适合作为稳定 fallback。
+- 支持 `whisper.cpp + Vulkan` 后端，适合 Intel Arc / AMD / NVIDIA 等 Vulkan GPU。
+- 使用 DeepSeek OpenAI-compatible API 分批翻译字幕。
+- 支持翻译 checkpoint，长视频中断后可以续跑。
+- 输出 `.json`、`.srt`、`.vtt` 和双语 `.srt`。
+- 提供 QA 检查，用于发现缺失翻译和常见异常。
+- 可在字幕完成后单独下载最高画质原视频。
 
 ## 环境要求
 
@@ -43,7 +26,7 @@
 
 可选但推荐：
 
-- Intel Arc / 其他支持 Vulkan 的 GPU
+- Intel Arc 或其他支持 Vulkan 的 GPU
 - `deno`，用于提升 `yt-dlp` 处理 YouTube JS challenge 的稳定性
 
 ## 快速开始
@@ -86,9 +69,9 @@ DEEPSEEK_MODEL=deepseek-chat
 
 该脚本会：
 
-- 安装/检查 `deno`
+- 安装或检查 `deno`
 - 下载 Windows Vulkan 版 `whisper.cpp`
-- 下载 `ggml-large-v3-turbo-q5_0.bin`
+- 下载默认 GGML Whisper 模型
 - 检查 Vulkan 设备
 
 使用 GPU 转写：
@@ -97,18 +80,18 @@ DEEPSEEK_MODEL=deepseek-chat
 .\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --backend whispercpp-vulkan --source-language en --target zh-CN
 ```
 
-## MIT 6.S184 课程模式
+## 通用用法
 
-单个视频：
+单个 YouTube 视频：
 
 ```powershell
-.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --mit-diffusion
+.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --target zh-CN
 ```
 
 批量视频：
 
 ```powershell
-.\.venv\Scripts\yt-translate.exe --file urls.txt --mit-diffusion
+.\.venv\Scripts\yt-translate.exe --file urls.txt --target zh-CN --keep-going
 ```
 
 `urls.txt` 格式：
@@ -116,24 +99,6 @@ DEEPSEEK_MODEL=deepseek-chat
 ```txt
 https://www.youtube.com/watch?v=VIDEO_ID_1
 https://www.youtube.com/watch?v=VIDEO_ID_2
-```
-
-`--mit-diffusion` 会自动启用：
-
-- `whispercpp-vulkan`
-- 英文源语言
-- 简体中文目标语言
-- VTT 输出
-- MIT 课程术语表
-- ASR/翻译术语后处理
-- checkpoint 续跑
-
-## 通用用法
-
-单个 YouTube 视频：
-
-```powershell
-.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --target zh-CN
 ```
 
 本地文件：
@@ -148,11 +113,17 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 .\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --skip-translation
 ```
 
+输出 WebVTT：
+
+```powershell
+.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --target zh-CN --vtt
+```
+
 ## 输出结构
 
 默认输出：
 
-- `downloads/`: 下载的音频/媒体文件
+- `downloads/`: 下载的音频或媒体文件
 - `cache/`: 16 kHz mono WAV 和中间文件
 - `outputs/*.source.json`: 原文转写结构化结果
 - `outputs/*.source.srt`: 原文字幕
@@ -161,21 +132,15 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
 - `outputs/*.bilingual.srt`: 双语字幕
 - `outputs/*.vtt`: WebVTT 字幕
 
-这些目录默认被 `.gitignore` 排除。
-
 ## QA 检查
 
 检查某个翻译 JSON：
 
 ```powershell
-.\.venv\Scripts\yt-translate.exe --qa "outputs\xxx.zh-CN.json" --profile mit-diffusion
+.\.venv\Scripts\yt-translate.exe --qa "outputs\xxx.zh-CN.json"
 ```
 
-QA 会报告：
-
-- 字幕段数
-- 缺失翻译数量
-- 可疑术语，例如 `floor matching`、`楼层匹配`、`地板匹配`
+QA 会报告字幕段数、缺失翻译数量和可疑文本。
 
 ## 下载最高画质原视频
 
@@ -192,37 +157,6 @@ bv*+ba/b
 ```
 
 并尽量合并为 MP4。
-
-## 整理和封装课程文件
-
-将视频、字幕整理到同一个课程文件夹，并生成内嵌双语 ASS 字幕和字体的 MKV：
-
-```powershell
-.\.venv\Scripts\python.exe package_course.py
-```
-
-输出文件夹：
-
-```txt
-MIT 6.S184 Flow Matching and Diffusion Models (2026)/
-```
-
-每集会生成：
-
-- `Lecture XX - Title.mp4`
-- `Lecture XX - Title.zh-CN.srt`
-- `Lecture XX - Title.source.srt`
-- `Lecture XX - Title.bilingual.srt`
-- `Lecture XX - Title.bilingual.ass`
-- `Lecture XX - Title.bilingual.mkv`
-
-ASS 字幕样式：
-
-- 第一行中文
-- 第二行英文
-- 中文字体：楷体 / `simkai.ttf`
-- 英文字体：Georgia
-- 字体作为 MKV attachment 内嵌
 
 ## 性能建议
 
@@ -241,26 +175,8 @@ GPU 推荐：
 经验值：
 
 - `faster-whisper medium int8 CPU` 稳定但慢。
-- `whisper.cpp Vulkan + large-v3-turbo-q5_0` 在 Intel Arc A750 上速度明显更好。
+- `whisper.cpp Vulkan` 在支持 Vulkan 的独立显卡上通常更快。
 - 长视频建议保留 checkpoint，不要使用 `--overwrite`，除非确实要重跑。
-
-## 安全和仓库边界
-
-不要提交这些内容：
-
-- `.env`
-- API Key
-- `.venv/`
-- `models/`
-- `tools/`
-- `downloads/`
-- `outputs/`
-- `cache/`
-- `logs/`
-- `videos/`
-- 课程 MKV/MP4 成品
-
-这些已经在 `.gitignore` 中排除。
 
 ## 项目结构
 
@@ -271,7 +187,7 @@ youtube_translator/
   doctor.py         # 环境诊断
   downloader.py     # yt-dlp 下载
   pipeline.py       # 主流水线
-  profiles.py       # 课程 profile 和术语表
+  profiles.py       # profile 和术语表
   qa.py             # QA 检查
   subtitles.py      # SRT/VTT/JSON 输出
   transcriber.py    # faster-whisper 后端
@@ -281,7 +197,7 @@ youtube_translator/
 
 ## 许可证
 
-当前仓库尚未声明许可证。开源发布前建议添加 `LICENSE`，例如 MIT License。
+本项目使用 MIT License。详见 [LICENSE](LICENSE)。
 
 ## 致谢
 
@@ -289,4 +205,3 @@ youtube_translator/
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
 - [DeepSeek API](https://api-docs.deepseek.com/)
-

@@ -1,6 +1,6 @@
 # YouTube Whisper DeepSeek Pipeline
 
-A local pipeline for translating YouTube lecture videos into Chinese subtitles. It downloads audio, transcribes with Whisper, translates subtitle segments with the DeepSeek API, writes source/translated/bilingual subtitles, and can package styled bilingual ASS subtitles into MKV files.
+A local pipeline for translating YouTube videos into Chinese subtitles. It downloads audio, transcribes with Whisper, translates subtitle segments with the DeepSeek API, and writes source, translated, and bilingual subtitles.
 
 Chinese documentation is the default: [README.md](README.md)
 
@@ -14,25 +14,8 @@ Chinese documentation is the default: [README.md](README.md)
 - DeepSeek OpenAI-compatible API translation.
 - Checkpointed translation for resumable long videos.
 - Outputs JSON, SRT, VTT, and bilingual subtitles.
-- MIT 6.S184 course profile with glossary and ASR cleanup.
-- QA command for missing translations and terminology drift.
-- Best-quality video download and MKV packaging with embedded ASS subtitles and fonts.
-
-## Target Use Case
-
-This project was built for MIT 6.S184: Introduction to Flow Matching and Diffusion Models, but it can also translate general English YouTube videos.
-
-The MIT course profile handles terms such as:
-
-- `flow matching` -> `流匹配`
-- `score matching` -> `score matching / 分数匹配`
-- `classifier-free guidance` -> `无分类器引导`
-- `Fokker-Planck equation` -> `Fokker-Planck 方程`
-- `probability path` -> `概率路径`
-- `vector field` -> `向量场`
-- `SDE / ODE / CTMC / DiT / U-Net / VAE`
-
-It also corrects common ASR drift such as `floor matching` -> `flow matching`.
+- QA command for missing translations and suspicious text.
+- Best-quality video download after subtitle generation.
 
 ## Requirements
 
@@ -55,6 +38,12 @@ Install Python dependencies:
 .\setup.ps1
 ```
 
+If your PowerShell profile prints completion warnings in non-interactive commands, run setup with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
 Create `.env` from `.env.example` and fill your API key:
 
 ```dotenv
@@ -75,7 +64,7 @@ Check the environment:
 .\setup_gpu.ps1
 ```
 
-This downloads a Windows Vulkan build of `whisper.cpp` and the `ggml-large-v3-turbo-q5_0.bin` model.
+This script installs or checks `deno`, downloads a Windows Vulkan build of `whisper.cpp`, downloads the default GGML Whisper model, and checks available Vulkan devices.
 
 GPU transcription:
 
@@ -83,26 +72,25 @@ GPU transcription:
 .\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --backend whispercpp-vulkan --source-language en --target zh-CN
 ```
 
-## MIT 6.S184 Preset
+## Usage
 
-Single video:
+Single YouTube video:
 
 ```powershell
-.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --mit-diffusion
+.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --target zh-CN
 ```
 
 Batch:
 
 ```powershell
-.\.venv\Scripts\yt-translate.exe --file urls.txt --mit-diffusion
+.\.venv\Scripts\yt-translate.exe --file urls.txt --target zh-CN --keep-going
 ```
 
-## General Usage
+`urls.txt` format:
 
-Single video:
-
-```powershell
-.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --target zh-CN
+```txt
+https://www.youtube.com/watch?v=VIDEO_ID_1
+https://www.youtube.com/watch?v=VIDEO_ID_2
 ```
 
 Local media:
@@ -115,6 +103,12 @@ Transcription only:
 
 ```powershell
 .\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --skip-translation
+```
+
+Write WebVTT:
+
+```powershell
+.\.venv\Scripts\yt-translate.exe "https://www.youtube.com/watch?v=VIDEO_ID" --target zh-CN --vtt
 ```
 
 ## Outputs
@@ -131,10 +125,10 @@ Transcription only:
 ## QA
 
 ```powershell
-.\.venv\Scripts\yt-translate.exe --qa "outputs\xxx.zh-CN.json" --profile mit-diffusion
+.\.venv\Scripts\yt-translate.exe --qa "outputs\xxx.zh-CN.json"
 ```
 
-The QA command reports missing translations and suspicious terms.
+The QA command reports segment counts, missing translations, and suspicious text.
 
 ## Download Best-Quality Videos
 
@@ -144,41 +138,54 @@ After subtitles are done:
 .\download_best_video.ps1 -UrlFile urls.txt -OutputDir videos
 ```
 
-## Package Course Files
-
-```powershell
-.\.venv\Scripts\python.exe package_course.py
-```
-
-This creates:
+The script uses:
 
 ```txt
-MIT 6.S184 Flow Matching and Diffusion Models (2026)/
+bv*+ba/b
 ```
 
-Each lecture gets simplified MP4, SRT, ASS, and MKV files. The MKV contains the original video/audio, an ASS subtitle track, and embedded `simkai.ttf` and `georgia.ttf` font attachments.
+and tries to merge the result as MP4.
 
-## Repository Safety
+## Performance Notes
 
-Do not commit:
+CPU fallback:
 
-- `.env`
-- API keys
-- `.venv/`
-- `models/`
-- `tools/`
-- `downloads/`
-- `outputs/`
-- `cache/`
-- `logs/`
-- `videos/`
-- packaged MKV/MP4 course files
+```powershell
+.\.venv\Scripts\yt-translate.exe "URL" --model medium --compute-type int8 --target zh-CN
+```
 
-These are ignored by `.gitignore`.
+Recommended GPU path:
+
+```powershell
+.\.venv\Scripts\yt-translate.exe "URL" --backend whispercpp-vulkan --source-language en --target zh-CN --beam-size 1
+```
+
+Notes:
+
+- `faster-whisper medium int8 CPU` is stable but slower.
+- `whisper.cpp Vulkan` is usually faster on a Vulkan-capable discrete GPU.
+- For long videos, keep checkpoints and avoid `--overwrite` unless you really want a full rerun.
+
+## Project Structure
+
+```txt
+youtube_translator/
+  audio.py          # ffmpeg audio conversion
+  cli.py            # CLI entry point
+  doctor.py         # environment diagnostics
+  downloader.py     # yt-dlp download logic
+  pipeline.py       # main pipeline
+  profiles.py       # profiles and glossary rules
+  qa.py             # QA checks
+  subtitles.py      # SRT/VTT/JSON output
+  transcriber.py    # faster-whisper backend
+  translator.py     # DeepSeek translation
+  whispercpp.py     # whisper.cpp Vulkan backend
+```
 
 ## License
 
-No license has been declared yet. Add a `LICENSE` file before public release if you want this to be an open-source project.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## Credits
 
@@ -186,4 +193,3 @@ No license has been declared yet. Add a `LICENSE` file before public release if 
 - [faster-whisper](https://github.com/SYSTRAN/faster-whisper)
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
 - [DeepSeek API](https://api-docs.deepseek.com/)
-
