@@ -57,6 +57,7 @@ def transcribe_with_whispercpp(
     best_of: int,
     use_gpu: bool,
     suppress_non_speech: bool,
+    initial_prompt: str | None,
     overwrite: bool,
 ) -> tuple[list[Segment], dict]:
     srt_path = Path(f"{output_stem}.srt")
@@ -91,6 +92,8 @@ def transcribe_with_whispercpp(
         command.append("-ng")
     if suppress_non_speech:
         command.append("-sns")
+    if initial_prompt:
+        command.extend(["--prompt", initial_prompt, "--carry-initial-prompt"])
 
     proc = subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True)
     if proc.returncode != 0:
@@ -104,5 +107,6 @@ def transcribe_with_whispercpp(
         "device": device,
         "threads": threads,
         "use_gpu": use_gpu,
+        "initial_prompt": initial_prompt,
     }
     return parse_srt(srt_path), metadata

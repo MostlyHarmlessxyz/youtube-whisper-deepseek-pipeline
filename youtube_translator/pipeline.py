@@ -62,9 +62,11 @@ def run_pipeline(
     whispercpp_suppress_non_speech: bool = True,
     profile_name: str | None = None,
     merge_segments: bool = True,
+    initial_prompt: str | None = None,
 ) -> PipelineResult:
     load_dotenv(PROJECT_ROOT / ".env")
     profile = get_profile(profile_name)
+    asr_prompt = initial_prompt if initial_prompt is not None else (profile.asr_prompt if profile else None)
 
     downloads = PROJECT_ROOT / "downloads"
     outputs = PROJECT_ROOT / "outputs"
@@ -72,7 +74,8 @@ def run_pipeline(
     ensure_dirs(downloads, outputs, cache, PROJECT_ROOT / "logs")
 
     download = prepare_source(source, downloads)
-    stem = safe_stem(download.work_id)
+    # whisper.cpp on Windows can fail on some Unicode paths, so keep internal artifacts ASCII-only.
+    stem = safe_stem(download.work_id, ascii_only=True)
     wav_path = cache / f"{stem}.16k.wav"
     transcript_json = outputs / f"{stem}.source.json"
     source_srt = outputs / f"{stem}.source.srt"
@@ -102,6 +105,7 @@ def run_pipeline(
                 best_of=1,
                 use_gpu=not whispercpp_no_gpu,
                 suppress_non_speech=whispercpp_suppress_non_speech,
+                initial_prompt=asr_prompt,
                 overwrite=overwrite,
             )
         elif backend == "faster-whisper":
@@ -115,6 +119,7 @@ def run_pipeline(
                 num_workers=num_workers,
                 beam_size=beam_size,
                 vad_filter=vad_filter,
+                initial_prompt=asr_prompt,
             )
         else:
             raise RuntimeError(f"Unsupported backend: {backend}")
@@ -133,6 +138,8 @@ def run_pipeline(
         }
     if profile:
         metadata["profile"] = profile.name
+    if asr_prompt:
+        metadata["asr_prompt"] = asr_prompt
     write_json(transcript_json, segments, metadata)
     write_srt(source_srt, segments, mode="source")
     if output_vtt:

@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .env
 url.txt
+cmu15445_fall2025_urls.txt
 downloads/
 outputs/
 cache/
@@ -10,8 +11,10 @@ logs/
 models/
 tools/
 videos/
+videos-cmu15445-fall2025/
 youtube_whisper_deepseek.egg-info/
 MIT 6.S184 Flow Matching and Diffusion Models (2026)/
+CMU 15-445-645 Intro to Database Systems (Fall 2025)/
 *.wav
 *.mp3
 *.m4a

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import shutil
@@ -8,14 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-VIDEOS = ROOT / "videos"
-OUTPUTS = ROOT / "outputs"
-COURSE_DIR = ROOT / "MIT 6.S184 Flow Matching and Diffusion Models (2026)"
-SOURCE_VIDEO_DIR = COURSE_DIR / "source-videos"
-SUBTITLE_DIR = COURSE_DIR / "subtitles"
-SOFT_SUB_DIR = COURSE_DIR / "soft-subbed-mkv"
-HARD_SUB_DIR = COURSE_DIR / "hard-subbed-mkv"
-FONT_DIR = COURSE_DIR / "fonts"
+DEFAULT_COURSE_DIR = ROOT / "MIT 6.S184 Flow Matching and Diffusion Models (2026)"
 FONT_ZH = Path(r"C:\Windows\Fonts\simkai.ttf")
 FONT_EN = Path(r"C:\Windows\Fonts\georgia.ttf")
 
@@ -39,14 +33,33 @@ def ass_time(seconds: float) -> str:
     return f"{hours}:{minutes:02}:{secs:02}.{centis:02}"
 
 
+def sanitize_filename(value: str) -> str:
+    value = re.sub(r'[<>:"/\\|?*]', " - ", value)
+    value = re.sub(r"\s+", " ", value)
+    return value.strip(" .-")
+
+
 def simplify_title(name: str) -> str:
-    match = re.search(r"(Lecture\s+\d+[A-Z]?)\s*(?:-|：|:)?\s*(.*?)\s*\(2026\)", name)
-    if not match:
-        return re.sub(r"\s*\[[^\]]+\].*$", "", name).strip()
-    lecture = match.group(1).strip()
-    title = re.sub(r"\s+", " ", match.group(2)).strip(" -:：")
-    title = title.replace("Neural networks", "Neural Networks")
-    return f"{lecture} - {title}"
+    base = Path(name).stem
+    base = re.sub(r"\s*\[[A-Za-z0-9_-]{11}\]\s*$", "", base).strip()
+
+    mit = re.search(r"(Lecture\s+\d+[A-Z]?)\s*(?:-|：|:)?\s*(.*?)\s*\(2026\)", base)
+    if mit:
+        lecture = mit.group(1).strip()
+        title = re.sub(r"\s+", " ", mit.group(2)).strip(" -:：")
+        title = title.replace("Neural networks", "Neural Networks")
+        return sanitize_filename(f"{lecture} - {title}")
+
+    cmu = re.search(r"#\s*(\d+[A-Z]?)\s*(?:-|：|:)?\s*(.*?)(?:\s*\(CMU Intro to Database Systems\))?$", base)
+    if cmu:
+        number = cmu.group(1).upper()
+        if number.isdigit():
+            number = f"{int(number):02d}"
+        title = re.sub(r"\s{2,}", " - ", cmu.group(2)).strip(" -:：")
+        title = re.sub(r"\s+", " ", title)
+        return sanitize_filename(f"Lecture {number} - {title}")
+
+    return sanitize_filename(re.sub(r"\s*\[[^\]]+\].*$", "", base).strip())
 
 
 def video_id(path: Path) -> str:
@@ -60,7 +73,7 @@ def ffmpeg_filter_path(path: Path) -> str:
     return str(path.resolve()).replace("\\", "/").replace(":", r"\:")
 
 
-def write_ass(json_path: Path, ass_path: Path) -> None:
+def write_ass(json_path: Path, ass_path: Path, title: str) -> None:
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     events: list[str] = []
     for item in payload["segments"]:
@@ -75,7 +88,7 @@ def write_ass(json_path: Path, ass_path: Path) -> None:
         )
 
     ass = f"""[Script Info]
-Title: MIT 6.S184 Bilingual Subtitles
+Title: {title} Bilingual Subtitles
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
@@ -99,7 +112,7 @@ def run(command: list[str], *, cwd: Path | None = None) -> None:
     subprocess.run(command, check=True, cwd=cwd)
 
 
-def mux_soft_subbed(video: Path, ass: Path, mkv: Path) -> None:
+def mux_soft_subbed(video: Path, ass: Path, mkv: Path, font_zh: Path, font_en: Path) -> None:
     command = [
         "ffmpeg",
         "-hide_banner",
@@ -124,10 +137,10 @@ def mux_soft_subbed(video: Path, ass: Path, mkv: Path) -> None:
         "default",
     ]
     attachments: list[tuple[Path, str]] = []
-    if FONT_ZH.exists():
-        attachments.append((FONT_ZH, "application/x-truetype-font"))
-    if FONT_EN.exists():
-        attachments.append((FONT_EN, "application/x-truetype-font"))
+    if font_zh.exists():
+        attachments.append((font_zh, "application/x-truetype-font"))
+    if font_en.exists():
+        attachments.append((font_en, "application/x-truetype-font"))
     for index, (font, mimetype) in enumerate(attachments):
         command.extend(
             [
@@ -143,8 +156,16 @@ def mux_soft_subbed(video: Path, ass: Path, mkv: Path) -> None:
     run(command)
 
 
-def mux_hard_subbed(video: Path, ass: Path, mkv: Path) -> None:
-    filter_arg = f"subtitles=filename='{ass.name}':fontsdir='{ffmpeg_filter_path(FONT_DIR)}'"
+def mux_hard_subbed(
+    video: Path,
+    ass: Path,
+    mkv: Path,
+    font_dir: Path,
+    codec: str,
+    quality: str,
+    preset: str,
+) -> None:
+    filter_arg = f"subtitles=filename='{ass.name}':fontsdir='{ffmpeg_filter_path(font_dir)}'"
     command = [
         "ffmpeg",
         "-hide_banner",
@@ -159,11 +180,11 @@ def mux_hard_subbed(video: Path, ass: Path, mkv: Path) -> None:
         "0:a?",
         "-sn",
         "-c:v",
-        "av1_qsv",
+        codec,
         "-global_quality",
-        "30",
+        quality,
         "-preset",
-        "medium",
+        preset,
         "-c:a",
         "copy",
         str(mkv),
@@ -171,24 +192,54 @@ def mux_hard_subbed(video: Path, ass: Path, mkv: Path) -> None:
     run(command, cwd=ass.parent)
 
 
-def prepare_dirs() -> None:
-    for path in (SOURCE_VIDEO_DIR, SUBTITLE_DIR, SOFT_SUB_DIR, HARD_SUB_DIR, FONT_DIR):
+def prepare_dirs(course_dir: Path, font_zh: Path, font_en: Path) -> dict[str, Path]:
+    dirs = {
+        "source": course_dir / "source-videos",
+        "subtitles": course_dir / "subtitles",
+        "soft": course_dir / "soft-subbed-mkv",
+        "hard": course_dir / "hard-subbed-mkv",
+        "fonts": course_dir / "fonts",
+    }
+    for path in dirs.values():
         path.mkdir(parents=True, exist_ok=True)
-    for font in (FONT_ZH, FONT_EN):
+    for font in (font_zh, font_en):
         if font.exists():
-            shutil.copy2(font, FONT_DIR / font.name)
+            shutil.copy2(font, dirs["fonts"] / font.name)
+    return dirs
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Package course videos with bilingual subtitles.")
+    parser.add_argument("--videos-dir", type=Path, default=ROOT / "videos")
+    parser.add_argument("--outputs-dir", type=Path, default=ROOT / "outputs")
+    parser.add_argument("--course-dir", type=Path, default=DEFAULT_COURSE_DIR)
+    parser.add_argument("--course-name", default=None)
+    parser.add_argument("--font-zh", type=Path, default=FONT_ZH)
+    parser.add_argument("--font-en", type=Path, default=FONT_EN)
+    parser.add_argument("--hard-codec", default="av1_qsv")
+    parser.add_argument("--hard-quality", default="30")
+    parser.add_argument("--hard-preset", default="medium")
+    parser.add_argument("--skip-soft-subbed", action="store_true")
+    parser.add_argument("--skip-hard-subbed", action="store_true")
+    return parser
 
 
 def main() -> None:
-    prepare_dirs()
-    json_by_id = {video_id(path): path for path in OUTPUTS.glob("*.zh-CN.json")}
-    source_srt_by_id = {video_id(path): path for path in OUTPUTS.glob("*.source.srt")}
-    zh_srt_by_id = {video_id(path): path for path in OUTPUTS.glob("*.zh-CN.srt")}
-    bilingual_srt_by_id = {video_id(path): path for path in OUTPUTS.glob("*.bilingual.srt")}
+    args = build_parser().parse_args()
+    videos_dir = args.videos_dir.resolve()
+    outputs_dir = args.outputs_dir.resolve()
+    course_dir = args.course_dir.resolve()
+    course_name = args.course_name or course_dir.name
+    dirs = prepare_dirs(course_dir, args.font_zh, args.font_en)
 
-    videos = sorted(VIDEOS.glob("*.*"), key=lambda path: simplify_title(path.name))
+    json_by_id = {video_id(path): path for path in outputs_dir.glob("*.zh-CN.json")}
+    source_srt_by_id = {video_id(path): path for path in outputs_dir.glob("*.source.srt")}
+    zh_srt_by_id = {video_id(path): path for path in outputs_dir.glob("*.zh-CN.srt")}
+    bilingual_srt_by_id = {video_id(path): path for path in outputs_dir.glob("*.bilingual.srt")}
+
+    videos = sorted(videos_dir.glob("*.*"), key=lambda path: simplify_title(path.name))
     if not videos:
-        raise RuntimeError(f"No source videos found in {VIDEOS}")
+        raise RuntimeError(f"No source videos found in {videos_dir}")
 
     for video in videos:
         vid = video_id(video)
@@ -197,14 +248,14 @@ def main() -> None:
             raise RuntimeError(f"Missing translated JSON for video id {vid}: {video.name}")
 
         print(f"Packaging {simple}", flush=True)
-        source_video = SOURCE_VIDEO_DIR / f"{simple}{video.suffix.lower()}"
-        ass_path = SUBTITLE_DIR / f"{simple}.bilingual.ass"
-        soft_mkv = SOFT_SUB_DIR / f"{simple}.soft-subbed.mkv"
-        hard_mkv = HARD_SUB_DIR / f"{simple}.hard-subbed.mkv"
+        source_video = dirs["source"] / f"{simple}{video.suffix.lower()}"
+        ass_path = dirs["subtitles"] / f"{simple}.bilingual.ass"
+        soft_mkv = dirs["soft"] / f"{simple}.soft-subbed.mkv"
+        hard_mkv = dirs["hard"] / f"{simple}.hard-subbed.mkv"
 
         if not source_video.exists() or source_video.stat().st_size != video.stat().st_size:
             shutil.copy2(video, source_video)
-        write_ass(json_by_id[vid], ass_path)
+        write_ass(json_by_id[vid], ass_path, course_name)
 
         for suffix, mapping in (
             (".zh-CN.srt", zh_srt_by_id),
@@ -212,10 +263,20 @@ def main() -> None:
             (".bilingual.srt", bilingual_srt_by_id),
         ):
             if vid in mapping:
-                shutil.copy2(mapping[vid], SUBTITLE_DIR / f"{simple}{suffix}")
+                shutil.copy2(mapping[vid], dirs["subtitles"] / f"{simple}{suffix}")
 
-        mux_soft_subbed(source_video, ass_path, soft_mkv)
-        mux_hard_subbed(source_video, ass_path, hard_mkv)
+        if not args.skip_soft_subbed:
+            mux_soft_subbed(source_video, ass_path, soft_mkv, args.font_zh, args.font_en)
+        if not args.skip_hard_subbed:
+            mux_hard_subbed(
+                source_video,
+                ass_path,
+                hard_mkv,
+                dirs["fonts"],
+                args.hard_codec,
+                args.hard_quality,
+                args.hard_preset,
+            )
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-language", default="auto", help="Source language or auto.")
     parser.add_argument(
         "--profile",
-        choices=["general", "mit-diffusion"],
+        choices=["general", "mit-diffusion", "cmu-db"],
         default="general",
         help="Domain profile for ASR cleanup and glossary-guided translation.",
     )
@@ -29,6 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--mit-diffusion",
         action="store_true",
         help="Shortcut preset for MIT 6.S184 diffusion course: Arc Vulkan, English, zh-CN, VTT.",
+    )
+    parser.add_argument(
+        "--cmu-db",
+        action="store_true",
+        help="Shortcut preset for CMU 15-445/645 database systems: Arc Vulkan, English, zh-CN, VTT.",
     )
     parser.add_argument("--model", default="medium", help="Whisper model size, e.g. small, medium, large-v3.")
     parser.add_argument("--device", default="cpu", help="faster-whisper device: cpu, cuda, or auto.")
@@ -41,6 +46,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--translation-concurrency", type=int, default=3)
     parser.add_argument("--retries", type=int, default=3)
     parser.add_argument("--temperature", type=float, default=0.1)
+    parser.add_argument(
+        "--initial-prompt",
+        help="Short English Whisper initial prompt. Defaults to the selected course profile prompt.",
+    )
     parser.add_argument("--skip-translation", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--keep-going", action="store_true", default=True, help="Continue batch after one source fails.")
@@ -105,6 +114,15 @@ def main() -> None:
         args.batch_size = min(args.batch_size, 20)
         args.translation_concurrency = min(args.translation_concurrency, 3)
         args.vtt = True
+    if args.cmu_db:
+        args.profile = "cmu-db"
+        args.backend = "whispercpp-vulkan"
+        args.source_language = "en"
+        args.target = "zh-CN"
+        args.beam_size = 1
+        args.batch_size = min(args.batch_size, 20)
+        args.translation_concurrency = min(args.translation_concurrency, 3)
+        args.vtt = True
     for source in iter_sources(args.source, args.file):
         try:
             result = run_pipeline(
@@ -134,6 +152,7 @@ def main() -> None:
                 whispercpp_suppress_non_speech=not args.whispercpp_keep_nst,
                 profile_name=args.profile,
                 merge_segments=not args.no_merge_segments,
+                initial_prompt=args.initial_prompt,
             )
         except Exception:
             print(f"Failed: {source}", flush=True)

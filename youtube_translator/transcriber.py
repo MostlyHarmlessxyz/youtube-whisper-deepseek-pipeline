@@ -21,6 +21,7 @@ def transcribe_audio(
     num_workers: int,
     beam_size: int,
     vad_filter: bool,
+    initial_prompt: str | None = None,
 ) -> tuple[list[Segment], dict]:
     from faster_whisper import WhisperModel
 
@@ -37,6 +38,7 @@ def transcribe_audio(
         beam_size=beam_size,
         vad_filter=vad_filter,
         vad_parameters={"min_silence_duration_ms": 500},
+        initial_prompt=initial_prompt or None,
     )
     segments = [
         Segment(index=i, start=item.start, end=item.end, text=item.text.strip())
@@ -50,6 +52,6 @@ def transcribe_audio(
         "model_size": model_size,
         "device": device,
         "compute_type": compute_type,
+        "initial_prompt": initial_prompt,
     }
     return segments, metadata
-

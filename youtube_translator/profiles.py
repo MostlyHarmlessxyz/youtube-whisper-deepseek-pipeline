@@ -9,6 +9,7 @@ from .models import Segment
 @dataclass(frozen=True, slots=True)
 class CourseProfile:
     name: str
+    asr_prompt: str
     prompt_context: str
     glossary: tuple[tuple[str, str], ...]
     asr_corrections: tuple[tuple[str, str], ...]
@@ -17,6 +18,11 @@ class CourseProfile:
 
 MIT_DIFFUSION_PROFILE = CourseProfile(
     name="mit-diffusion",
+    asr_prompt=(
+        "MIT 6.S184 lecture on flow matching, diffusion models, ODE, SDE, "
+        "Fokker-Planck equation, probability path, vector field, score function, "
+        "classifier-free guidance, Brownian motion, Gaussian, U-Net, DiT, VAE."
+    ),
     prompt_context=(
         "Domain: MIT 6.S184, Introduction to Flow Matching and Diffusion Models. "
         "Translate as technical lecture subtitles for Chinese readers. Keep math symbols, "
@@ -86,10 +92,112 @@ MIT_DIFFUSION_PROFILE = CourseProfile(
     ),
 )
 
+CMU_DB_PROFILE = CourseProfile(
+    name="cmu-db",
+    asr_prompt=(
+        "CMU 15-445 15-645 Intro to Database Systems lecture. "
+        "Relational model, relational algebra, SQL, DBMS, tuple, page, slotted page, "
+        "buffer pool, LRU, Clock, LSM tree, column-store, row-store, hash table, "
+        "B+ tree, inverted index, skip list, Bloom filter, latch, lock, hash join, "
+        "sort-merge join, query optimizer, transaction, two-phase locking, MVCC, WAL, "
+        "ARIES, distributed database."
+    ),
+    prompt_context=(
+        "Domain: CMU 15-445/645 Intro to Database Systems. "
+        "Translate as technical database systems lecture subtitles for Chinese readers. "
+        "Keep database acronyms, system names, SQL keywords, C++ terms, and algorithm names in English "
+        "when that is clearer, and provide concise Chinese translations for concepts."
+    ),
+    glossary=(
+        ("relational model", "关系模型"),
+        ("relational algebra", "关系代数"),
+        ("SQL", "SQL"),
+        ("DBMS", "DBMS / 数据库管理系统"),
+        ("database management system", "数据库管理系统"),
+        ("tuple", "元组"),
+        ("page", "页"),
+        ("slotted page", "槽页"),
+        ("buffer pool", "缓冲池"),
+        ("buffer pool manager", "缓冲池管理器"),
+        ("page table", "页表"),
+        ("replacement policy", "替换策略"),
+        ("LRU", "LRU"),
+        ("clock algorithm", "Clock 算法"),
+        ("log-structured storage", "日志结构化存储"),
+        ("LSM tree", "LSM tree"),
+        ("column-store", "列式存储"),
+        ("row-store", "行式存储"),
+        ("compression", "压缩"),
+        ("hash table", "哈希表"),
+        ("B+ tree", "B+ tree"),
+        ("index", "索引"),
+        ("inverted index", "倒排索引"),
+        ("skip list", "跳表"),
+        ("Bloom filter", "Bloom filter / 布隆过滤器"),
+        ("latch", "latch / 闩锁"),
+        ("lock", "lock / 锁"),
+        ("sorting", "排序"),
+        ("aggregation", "聚合"),
+        ("hash join", "哈希连接"),
+        ("sort-merge join", "排序归并连接"),
+        ("nested loop join", "嵌套循环连接"),
+        ("query execution", "查询执行"),
+        ("query optimizer", "查询优化器"),
+        ("query optimization", "查询优化"),
+        ("cost model", "成本模型"),
+        ("cardinality estimation", "基数估计"),
+        ("transaction", "事务"),
+        ("concurrency control", "并发控制"),
+        ("serializability", "可串行化"),
+        ("two-phase locking / 2PL", "两阶段锁 / 2PL"),
+        ("timestamp ordering", "时间戳排序"),
+        ("MVCC", "MVCC / 多版本并发控制"),
+        ("write-ahead logging / WAL", "预写日志 / WAL"),
+        ("shadow paging", "影子分页"),
+        ("crash recovery", "崩溃恢复"),
+        ("checkpoint", "检查点"),
+        ("ARIES", "ARIES"),
+        ("distributed database", "分布式数据库"),
+        ("replication", "复制"),
+        ("partitioning", "分区"),
+        ("sharding", "分片"),
+        ("consensus", "共识"),
+    ),
+    asr_corrections=(
+        (r"\bsequel\b", "SQL"),
+        (r"\bB plus tree\b", "B+ tree"),
+        (r"\bbtree\b", "B-tree"),
+        (r"\bb tree\b", "B-tree"),
+        (r"\bls m\b", "LSM"),
+        (r"\blsm\b", "LSM"),
+        (r"\bm v c c\b", "MVCC"),
+        (r"\bw a l\b", "WAL"),
+        (r"\btwo phase locking\b", "two-phase locking"),
+        (r"\btwo-phase lacking\b", "two-phase locking"),
+        (r"\bsort merge join\b", "sort-merge join"),
+        (r"\bhash joins\b", "hash joins"),
+    ),
+    translation_corrections=(
+        (r"续集", "SQL"),
+        (r"SQL语言", "SQL"),
+        (r"B加树", "B+ tree"),
+        (r"B\+树", "B+ tree"),
+        (r"缓冲池经理", "缓冲池管理器"),
+        (r"页面", "页"),
+        (r"闩锁", "latch / 闩锁"),
+        (r"两阶段锁定", "两阶段锁"),
+        (r"多版本并发控制", "MVCC / 多版本并发控制"),
+        (r"预写日志记录", "预写日志"),
+        (r"阴影分页", "影子分页"),
+        (r"崩溃恢复", "崩溃恢复"),
+    ),
+)
+
 
 PROFILES = {
     "general": None,
     MIT_DIFFUSION_PROFILE.name: MIT_DIFFUSION_PROFILE,
+    CMU_DB_PROFILE.name: CMU_DB_PROFILE,
 }
 
 

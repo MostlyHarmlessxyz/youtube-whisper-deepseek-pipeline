@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import unicodedata
 from pathlib import Path
 
 
@@ -14,8 +15,12 @@ def ensure_dirs(*paths: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
 
 
-def safe_stem(value: str, fallback: str = "video") -> str:
+def safe_stem(value: str, fallback: str = "video", *, ascii_only: bool = False) -> str:
+    if ascii_only:
+        value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     value = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', " ", value)
+    if ascii_only:
+        value = re.sub(r"[^A-Za-z0-9 ._\-()[\]#&+,']+", " ", value)
     value = re.sub(r"\s+", " ", value).strip(" .")
     return value[:160] or fallback
 
@@ -32,4 +37,3 @@ def env_int(name: str, default: int) -> int:
         return int(raw)
     except ValueError:
         return default
-
