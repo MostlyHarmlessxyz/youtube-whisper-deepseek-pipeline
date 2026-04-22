@@ -5,6 +5,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -12,6 +13,13 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_COURSE_DIR = ROOT / "MIT 6.S184 Flow Matching and Diffusion Models (2026)"
 FONT_ZH = Path(r"C:\Windows\Fonts\simkai.ttf")
 FONT_EN = Path(r"C:\Windows\Fonts\georgia.ttf")
+
+
+def configure_stdio() -> None:
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name)
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
 
 
 def ass_escape(text: str) -> str:
@@ -110,6 +118,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
 def run(command: list[str], *, cwd: Path | None = None) -> None:
     subprocess.run(command, check=True, cwd=cwd)
+
+
+def is_complete_file(path: Path) -> bool:
+    return path.exists() and path.stat().st_size > 0
 
 
 def mux_soft_subbed(video: Path, ass: Path, mkv: Path, font_zh: Path, font_en: Path) -> None:
@@ -225,6 +237,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    configure_stdio()
     args = build_parser().parse_args()
     videos_dir = args.videos_dir.resolve()
     outputs_dir = args.outputs_dir.resolve()
@@ -265,9 +278,9 @@ def main() -> None:
             if vid in mapping:
                 shutil.copy2(mapping[vid], dirs["subtitles"] / f"{simple}{suffix}")
 
-        if not args.skip_soft_subbed:
+        if not args.skip_soft_subbed and not is_complete_file(soft_mkv):
             mux_soft_subbed(source_video, ass_path, soft_mkv, args.font_zh, args.font_en)
-        if not args.skip_hard_subbed:
+        if not args.skip_hard_subbed and not is_complete_file(hard_mkv):
             mux_hard_subbed(
                 source_video,
                 ass_path,
