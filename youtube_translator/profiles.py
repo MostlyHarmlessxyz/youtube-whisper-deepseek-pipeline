@@ -220,11 +220,110 @@ CMU_DB_PROFILE = CourseProfile(
     ),
 )
 
+BERKELEY_DUL_PROFILE = CourseProfile(
+    name="berkeley-dul",
+    asr_prompt=(
+        "UC Berkeley CS294-158 Deep Unsupervised Learning lecture. "
+        "Deep generative models, self-supervised learning, autoregressive models, "
+        "normalizing flows, latent variable models, VAE, ELBO, GAN, diffusion models, "
+        "score matching, contrastive learning, masked autoencoder, Transformer, LLM, "
+        "video generation, multimodal models, NeRF, AI for science."
+    ),
+    prompt_context=(
+        "Domain: UC Berkeley CS294-158 Deep Unsupervised Learning. "
+        "Translate as technical deep learning lecture subtitles for Chinese readers. "
+        "Keep mathematical symbols, model names, acronyms, loss names, and paper/system names in English "
+        "when that is clearer; use standard Chinese terms for machine learning concepts."
+    ),
+    glossary=(
+        ("deep unsupervised learning", "深度无监督学习"),
+        ("deep generative model", "深度生成模型"),
+        ("self-supervised learning", "自监督学习"),
+        ("autoregressive model", "自回归模型"),
+        ("language model", "语言模型"),
+        ("Transformer", "Transformer"),
+        ("attention", "注意力"),
+        ("normalizing flow", "normalizing flow（归一化流）"),
+        ("flow model", "流模型"),
+        ("change of variables", "变量替换"),
+        ("Jacobian", "Jacobian（雅可比矩阵）"),
+        ("latent variable model", "潜变量模型"),
+        ("variational autoencoder / VAE", "VAE（变分自编码器）"),
+        ("evidence lower bound / ELBO", "ELBO（证据下界）"),
+        ("encoder", "编码器"),
+        ("decoder", "解码器"),
+        ("posterior", "后验"),
+        ("prior", "先验"),
+        ("reparameterization trick", "重参数化技巧"),
+        ("generative adversarial network / GAN", "GAN（生成对抗网络）"),
+        ("implicit model", "隐式模型"),
+        ("diffusion model", "扩散模型"),
+        ("denoising diffusion", "去噪扩散"),
+        ("score matching", "score matching（分数匹配）"),
+        ("classifier-free guidance", "无分类器引导"),
+        ("contrastive learning", "对比学习"),
+        ("representation learning", "表征学习"),
+        ("masked autoencoder / MAE", "MAE（掩码自编码器）"),
+        ("large language model / LLM", "LLM（大语言模型）"),
+        ("tokenizer", "tokenizer（分词器）"),
+        ("video generation", "视频生成"),
+        ("semi-supervised learning", "半监督学习"),
+        ("distribution alignment", "分布对齐"),
+        ("compression", "压缩"),
+        ("multimodal model", "多模态模型"),
+        ("parallelization", "并行化"),
+        ("AI for science", "AI for Science"),
+        ("neural radiance field / NeRF", "NeRF（神经辐射场）"),
+        ("ray marching", "ray marching（光线步进）"),
+        ("volume rendering", "体渲染"),
+    ),
+    asr_corrections=(
+        (r"\bveryational auto ?encoder\b", "variational autoencoder"),
+        (r"\bvariation auto ?encoder\b", "variational autoencoder"),
+        (r"\bvariational auto encoder\b", "variational autoencoder"),
+        (r"\be l b o\b", "ELBO"),
+        (r"\bgans\b", "GANs"),
+        (r"\bg a n\b", "GAN"),
+        (r"\bv a e\b", "VAE"),
+        (r"\bl l m\b", "LLM"),
+        (r"\bnerf\b", "NeRF"),
+        (r"\bnormalizing floor\b", "normalizing flow"),
+        (r"\bfloor models?\b", "flow models"),
+        (r"\bscore base(d)? models?\b", "score-based models"),
+        (r"\bclassifier free guidance\b", "classifier-free guidance"),
+        (r"\bself supervised\b", "self-supervised"),
+        (r"\bsemi supervised\b", "semi-supervised"),
+        (r"\bmulti modal\b", "multimodal"),
+        (r"\bradiance fields?\b", "radiance fields"),
+    ),
+    translation_corrections=(
+        (r"自我监督学习", "自监督学习"),
+        (r"自动回归模型", "自回归模型"),
+        (r"归一化流程", "normalizing flow（归一化流）"),
+        (r"正常化流", "normalizing flow（归一化流）"),
+        (r"流量模型", "流模型"),
+        (r"楼层模型", "流模型"),
+        (r"地板模型", "流模型"),
+        (r"变量变化", "变量替换"),
+        (r"潜在变量模型", "潜变量模型"),
+        (r"变分自动编码器", "VAE（变分自编码器）"),
+        (r"证据下限", "ELBO（证据下界）"),
+        (r"重新参数化技巧", "重参数化技巧"),
+        (r"生成对抗网络\s*/\s*GAN", "GAN（生成对抗网络）"),
+        (r"得分匹配", "score matching（分数匹配）"),
+        (r"分类器免费指导", "无分类器引导"),
+        (r"无分类器指导", "无分类器引导"),
+        (r"表示学习", "表征学习"),
+        (r"大型语言模型", "LLM（大语言模型）"),
+    ),
+)
+
 
 PROFILES = {
     "general": None,
     MIT_DIFFUSION_PROFILE.name: MIT_DIFFUSION_PROFILE,
     CMU_DB_PROFILE.name: CMU_DB_PROFILE,
+    BERKELEY_DUL_PROFILE.name: BERKELEY_DUL_PROFILE,
 }
 
 
