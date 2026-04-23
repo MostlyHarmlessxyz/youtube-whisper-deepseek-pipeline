@@ -67,6 +67,24 @@ def simplify_title(name: str) -> str:
         title = re.sub(r"\s+", " ", title)
         return sanitize_filename(f"Lecture {number} - {title}")
 
+    berkeley = re.search(r"\bL\s*(\d+)([ABab]?)\s+(.*)$", base)
+    if berkeley:
+        number = int(berkeley.group(1))
+        suffix = berkeley.group(2).upper()
+        title = berkeley.group(3)
+        title = re.split(
+            r"\s+--+\s+(?:CS294-158|UC Berkeley|Instructor:|Guest Instructor|Guest Lecturer)",
+            title,
+            maxsplit=1,
+        )[0]
+        title = re.sub(r"\s*\(.*?(?:SP24|Spring 2024|UC Berkeley).*?\)\s*", " ", title, flags=re.IGNORECASE)
+        title = re.sub(r"\s+", " ", title).strip(" -:：")
+        if number == 10 and re.search(r"\bCompression\b", title, flags=re.IGNORECASE):
+            number = 11
+            suffix = ""
+        lecture = f"{number:02d}{suffix}"
+        return sanitize_filename(f"Lecture {lecture} - {title}")
+
     return sanitize_filename(re.sub(r"\s*\[[^\]]+\].*$", "", base).strip())
 
 
