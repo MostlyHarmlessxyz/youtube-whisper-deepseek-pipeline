@@ -16,6 +16,17 @@ DEFAULT_SUSPICIOUS = (
 )
 
 
+def consecutive_repeat_pairs(segments: list[dict], field: str) -> int:
+    count = 0
+    last = None
+    for item in segments:
+        text = str(item.get(field) or "").strip()
+        if text and text == last:
+            count += 1
+        last = text or None
+    return count
+
+
 def qa_report(path: Path, profile_name: str | None = None) -> None:
     profile = get_profile(profile_name)
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -36,6 +47,8 @@ def qa_report(path: Path, profile_name: str | None = None) -> None:
     print(f"QA file: {path}")
     print(f"Segments: {len(segments)}")
     print(f"Missing translations: {len(missing)}")
+    print(f"Repeated source pairs: {consecutive_repeat_pairs(segments, 'text')}")
+    print(f"Repeated translation pairs: {consecutive_repeat_pairs(segments, 'translated_text')}")
     if missing:
         print(f"Missing ids: {missing[:50]}")
 
