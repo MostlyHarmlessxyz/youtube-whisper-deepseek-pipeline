@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 
@@ -47,6 +48,80 @@ def sanitize_filename(value: str) -> str:
     return value.strip(" .-")
 
 
+def char_width(ch: str) -> float:
+    if not ch or ch in "\r\n":
+        return 0.0
+    if ch.isspace():
+        return 0.6
+    if unicodedata.east_asian_width(ch) in {"W", "F"}:
+        return 2.0
+    return 1.0
+
+
+def text_width(text: str) -> float:
+    return sum(char_width(ch) for ch in text)
+
+
+def wrap_word_text(text: str, max_width: float) -> list[str]:
+    words = text.split()
+    if not words:
+        return []
+    lines: list[str] = []
+    line = ""
+    for word in words:
+        candidate = word if not line else f"{line} {word}"
+        if text_width(candidate) <= max_width:
+            line = candidate
+            continue
+        if line:
+            lines.append(line)
+            line = ""
+        if text_width(word) <= max_width:
+            line = word
+            continue
+        chunk = ""
+        for ch in word:
+            candidate = f"{chunk}{ch}"
+            if chunk and text_width(candidate) > max_width:
+                lines.append(chunk)
+                chunk = ch
+            else:
+                chunk = candidate
+        line = chunk
+    if line:
+        lines.append(line)
+    return lines
+
+
+def wrap_char_text(text: str, max_width: float) -> list[str]:
+    tokens = re.findall(r"[A-Za-z0-9_./:+-]+|.", text)
+    if not tokens:
+        return []
+    lines: list[str] = []
+    line = ""
+    for token in tokens:
+        candidate = f"{line}{token}"
+        if line and text_width(candidate) > max_width:
+            lines.append(line)
+            line = token.lstrip()
+            continue
+        line = candidate
+    if line:
+        lines.append(line)
+    return [segment.strip() for segment in lines if segment.strip()]
+
+
+def wrap_subtitle_text(text: str, max_width: float, prefer_words: bool) -> list[str]:
+    normalized = re.sub(r"\s+", " ", text).strip()
+    if not normalized:
+        return []
+    return (
+        wrap_word_text(normalized, max_width)
+        if prefer_words
+        else wrap_char_text(normalized, max_width)
+    )
+
+
 def simplify_title(name: str) -> str:
     base = Path(name).stem
     base = re.sub(r"\s*\[[A-Za-z0-9_-]{11}\]\s*$", "", base).strip()
@@ -85,6 +160,20 @@ def simplify_title(name: str) -> str:
         lecture = f"{number:02d}{suffix}"
         return sanitize_filename(f"Lecture {lecture} - {title}")
 
+    cs144 = re.search(
+        r"Introduction to Computer Networking CS 144\s+pn(\d+)\s+p\d+\s+(.*)$",
+        base,
+        flags=re.IGNORECASE,
+    )
+    if cs144:
+        number = int(cs144.group(1))
+        title = cs144.group(2)
+        title = re.sub(r"^(?:Guest Lectures?\s+\d+\s+\d+)\s+", "", title, flags=re.IGNORECASE)
+        title = re.sub(r"^\d+\s+\d+[A-Za-z]?\s+", "", title)
+        title = re.sub(r"\s+\d+\s*$", "", title).strip()
+        title = re.sub(r"\s+", " ", title).strip(" -:：")
+        return sanitize_filename(f"Lecture {number:03d} - {title}")
+
     return sanitize_filename(re.sub(r"\s*\[[^\]]+\].*$", "", base).strip())
 
 
@@ -103,9 +192,13 @@ def write_ass(json_path: Path, ass_path: Path, title: str) -> None:
     payload = json.loads(json_path.read_text(encoding="utf-8"))
     events: list[str] = []
     for item in payload["segments"]:
-        zh = ass_escape(item.get("translated_text") or item.get("text") or "")
-        en = ass_escape(item.get("text") or "")
-        text = rf"{{\rZh}}{zh}\N{{\rEn}}{en}"
+        zh_text = item.get("translated_text") or item.get("text") or ""
+        en_text = item.get("text") or ""
+        zh_lines = wrap_subtitle_text(zh_text, max_width=34, prefer_words=False)
+        en_lines = wrap_subtitle_text(en_text, max_width=54, prefer_words=True)
+        zh_block = r"\N".join(rf"{{\rZh}}{ass_escape(line)}" for line in zh_lines[:3])
+        en_block = r"\N".join(rf"{{\rEn}}{ass_escape(line)}" for line in en_lines[:3])
+        text = zh_block if not en_block else rf"{zh_block}\N{en_block}"
         events.append(
             "Dialogue: 0,"
             f"{ass_time(float(item['start']))},"
@@ -124,8 +217,8 @@ PlayResY: 1080
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Zh,KaiTi,52,&H00F4F4F4,&H000000FF,&H00111111,&H99000000,0,0,0,0,100,100,0,0,1,3,0,2,80,80,44,1
-Style: En,Georgia,36,&H00D7D7D7,&H000000FF,&H00111111,&H99000000,0,0,0,0,100,100,0,0,1,2,0,2,80,80,44,1
+Style: Zh,KaiTi,44,&H00F4F4F4,&H000000FF,&H00111111,&H99000000,0,0,0,0,100,100,0,0,1,3,0,2,96,96,72,1
+Style: En,Georgia,30,&H00D7D7D7,&H000000FF,&H00111111,&H99000000,0,0,0,0,100,100,0,0,1,2,0,2,96,96,72,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text

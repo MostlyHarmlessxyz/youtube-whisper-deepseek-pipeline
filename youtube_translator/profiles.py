@@ -318,12 +318,132 @@ BERKELEY_DUL_PROFILE = CourseProfile(
     ),
 )
 
+CS144_NET_PROFILE = CourseProfile(
+    name="cs144-net",
+    asr_prompt=(
+        "Stanford CS144 Introduction to Computer Networking lecture. "
+        "Internet, IP, datagram, packet switching, encapsulation, multiplexing, "
+        "TCP, UDP, ICMP, checksum, finite state machine, stop-and-wait, sliding window, "
+        "retransmission, congestion control, AIMD, NAT, HTTP, DNS, DHCP, routing, "
+        "Bellman-Ford, Dijkstra, RIP, OSPF, BGP, Ethernet, Wi-Fi, MAC, CSMA/CD, CSMA/CA, "
+        "TLS, confidentiality, integrity."
+    ),
+    prompt_context=(
+        "Domain: Stanford CS144 Introduction to Computer Networking. "
+        "Translate as technical networking lecture subtitles for Chinese readers. "
+        "Keep protocol names, RFC-style acronyms, algorithm names, and system terms in English "
+        "when that is clearer; use standard Chinese networking terminology."
+    ),
+    glossary=(
+        ("Internet", "互联网"),
+        ("IP", "IP"),
+        ("datagram", "数据报"),
+        ("packet", "分组"),
+        ("encapsulation", "封装"),
+        ("multiplexing", "复用"),
+        ("demultiplexing", "解复用"),
+        ("service model", "服务模型"),
+        ("reliability", "可靠性"),
+        ("TCP", "TCP"),
+        ("UDP", "UDP"),
+        ("ICMP", "ICMP"),
+        ("end-to-end principle", "端到端原则"),
+        ("checksum", "校验和"),
+        ("finite state machine", "有限状态机"),
+        ("stop-and-wait", "停等协议"),
+        ("sliding window", "滑动窗口"),
+        ("retransmission", "重传"),
+        ("connection establishment", "连接建立"),
+        ("packet switching", "分组交换"),
+        ("queueing delay", "排队时延"),
+        ("congestion control", "拥塞控制"),
+        ("AIMD", "AIMD"),
+        ("NAT", "NAT"),
+        ("HTTP", "HTTP"),
+        ("BitTorrent", "BitTorrent"),
+        ("DNS", "DNS"),
+        ("DHCP", "DHCP"),
+        ("routing", "路由"),
+        ("Bellman-Ford", "Bellman-Ford"),
+        ("Dijkstra", "Dijkstra"),
+        ("RIP", "RIP"),
+        ("OSPF", "OSPF"),
+        ("BGP", "BGP"),
+        ("multicast", "组播"),
+        ("spanning tree", "生成树"),
+        ("IPv6", "IPv6"),
+        ("Shannon capacity", "Shannon 容量"),
+        ("modulation", "调制"),
+        ("bit error", "比特错误"),
+        ("FEC", "FEC"),
+        ("Reed-Solomon", "Reed-Solomon"),
+        ("MAC", "MAC"),
+        ("CSMA/CD", "CSMA/CD"),
+        ("Ethernet", "以太网"),
+        ("wireless", "无线网络"),
+        ("CSMA/CA", "CSMA/CA"),
+        ("RTS/CTS", "RTS/CTS"),
+        ("Wi-Fi", "Wi-Fi"),
+        ("fragmentation", "分片"),
+        ("TLS", "TLS"),
+        ("confidentiality", "机密性"),
+        ("integrity", "完整性"),
+        ("certificate", "证书"),
+        ("public key cryptography", "公钥密码学"),
+    ),
+    asr_corrections=(
+        (r"\bencapslation\b", "encapsulation"),
+        (r"\bbyte order\b", "byte order"),
+        (r"\blongest prefix match l p\b", "longest prefix match"),
+        (r"\baddress resolution proto(?:col)?\b", "Address Resolution Protocol"),
+        (r"\bend to end principle\b", "end-to-end principle"),
+        (r"\bfinite state machines\b", "finite state machines"),
+        (r"\breliable comm\b", "reliable communication"),
+        (r"\bbellman ford\b", "Bellman-Ford"),
+        (r"\bcsma cd\b", "CSMA/CD"),
+        (r"\bcsma ca\b", "CSMA/CA"),
+        (r"\brts cts\b", "RTS/CTS"),
+        (r"\bwifi\b", "Wi-Fi"),
+        (r"\bmac overflow attack\b", "MAC overflow attack"),
+        (r"\bpublic key cryptography\b", "public key cryptography"),
+    ),
+    translation_corrections=(
+        (r"网际网路|因特网", "互联网"),
+        (r"数据包", "分组"),
+        (r"封包", "分组"),
+        (r"多路复用", "复用"),
+        (r"去复用", "解复用"),
+        (r"服务模型", "服务模型"),
+        (r"可靠通信", "可靠通信"),
+        (r"末端到末端原则", "端到端原则"),
+        (r"校验码", "校验和"),
+        (r"有限状态机器", "有限状态机"),
+        (r"停止并等待|停-等", "停等协议"),
+        (r"滑动视窗", "滑动窗口"),
+        (r"重新传输", "重传"),
+        (r"建立连接", "连接建立"),
+        (r"包交换", "分组交换"),
+        (r"排队延迟", "排队时延"),
+        (r"壅塞控制", "拥塞控制"),
+        (r"位洪流", "BitTorrent"),
+        (r"生成树协议", "生成树"),
+        (r"香农容量", "Shannon 容量"),
+        (r"位错误", "比特错误"),
+        (r"有线局域网", "以太网"),
+        (r"无线网络", "无线网络"),
+        (r"机密度", "机密性"),
+        (r"完整度", "完整性"),
+        (r"公开密钥密码学", "公钥密码学"),
+    ),
+)
+
 
 PROFILES = {
     "general": None,
     MIT_DIFFUSION_PROFILE.name: MIT_DIFFUSION_PROFILE,
     CMU_DB_PROFILE.name: CMU_DB_PROFILE,
     BERKELEY_DUL_PROFILE.name: BERKELEY_DUL_PROFILE,
+    CS144_NET_PROFILE.name: CS144_NET_PROFILE,
 }
 
 

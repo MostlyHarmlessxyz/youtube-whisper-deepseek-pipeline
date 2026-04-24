@@ -22,7 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-language", default="auto", help="Source language or auto.")
     parser.add_argument(
         "--profile",
-        choices=["general", "mit-diffusion", "cmu-db", "berkeley-dul"],
+        choices=["general", "mit-diffusion", "cmu-db", "berkeley-dul", "cs144-net"],
         default="general",
         help="Domain profile for ASR cleanup and glossary-guided translation.",
     )
@@ -40,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--berkeley-dul",
         action="store_true",
         help="Shortcut preset for Berkeley CS294-158 deep unsupervised learning: Arc Vulkan, English, zh-CN, VTT.",
+    )
+    parser.add_argument(
+        "--cs144-net",
+        action="store_true",
+        help="Shortcut preset for Stanford CS144 networking: Arc Vulkan, English, zh-CN, VTT.",
     )
     parser.add_argument("--model", default="medium", help="Whisper model size, e.g. small, medium, large-v3.")
     parser.add_argument("--device", default="cpu", help="faster-whisper device: cpu, cuda, or auto.")
@@ -135,6 +140,15 @@ def main() -> None:
         args.vtt = True
     if args.berkeley_dul:
         args.profile = "berkeley-dul"
+        args.backend = "whispercpp-vulkan"
+        args.source_language = "en"
+        args.target = "zh-CN"
+        args.beam_size = 1
+        args.batch_size = min(args.batch_size, 20)
+        args.translation_concurrency = min(args.translation_concurrency, 3)
+        args.vtt = True
+    if args.cs144_net:
+        args.profile = "cs144-net"
         args.backend = "whispercpp-vulkan"
         args.source_language = "en"
         args.target = "zh-CN"

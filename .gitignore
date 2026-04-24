@@ -5,6 +5,7 @@ __pycache__/
 url.txt
 cmu15445_fall2025_urls.txt
 berkeley_cs294_158_sp24_urls.txt
+cs144_urls.txt
 downloads/
 outputs/
 cache/
@@ -14,10 +15,12 @@ tools/
 videos/
 videos-cmu15445-fall2025/
 videos-berkeley-cs294-158-sp24/
+videos-cs144/
 youtube_whisper_deepseek.egg-info/
 MIT 6.S184 Flow Matching and Diffusion Models (2026)/
 CMU 15-445-645 Intro to Database Systems (Fall 2025)/
 Berkeley CS294-158 Deep Unsupervised Learning (Spring 2024)/
+Stanford CS144 Introduction to Computer Networking/
 *.wav
 *.mp3
 *.m4a
